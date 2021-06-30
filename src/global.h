@@ -55,6 +55,11 @@ namespace HEX {
 }
 
 namespace INSTRUCTION {
+    /*
+     * In the Book 'The RISC-V Instruction Set Manual'
+     * SB is B-type
+     * UJ is J-type
+     */
     enum insMnemonic {
         NONE,
         LUI,    // U    Load Upper Immediate
@@ -96,7 +101,12 @@ namespace INSTRUCTION {
         AND     // R    AND
     };
 
-    void decodeIns(u32 ins,
+    inline void signExtend(u32 &arg, u32 highBit) {
+        if (arg & (1u << highBit))
+            arg |= 0b11111111'11111111'11111111'11111111u << (highBit + 1);
+    }
+
+    void decodeIns(const u32 ins,
                    u32 &instruction, u32 &rs1, u32 &rs2, u32 &rd, u32 &imm,
                    u32 &regFlag) {
         u32 opcode, funct3, funct7;
@@ -106,6 +116,7 @@ namespace INSTRUCTION {
         rs1     = (ins & 0b00000000'00001111'10000000'00000000u) >> 15u;    // Register 1
         rs2     = (ins & 0b00000001'11110000'00000000'00000000u) >> 20u;    // Register 2
         rd      = (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;     // Memory
+        imm     = 0;
 
 #define SETMNE(_x) (instruction = ((instruction == insMnemonic::NONE) ? (insMnemonic::_x) : (instruction)))
 
@@ -126,8 +137,7 @@ namespace INSTRUCTION {
                 imm |= (ins & 0b01111111'11100000'00000000'00000000u) >> 20u;   // 10:1
                 imm |= (ins & 0b00000000'00010000'00000000'00000000u) >> 9u;    // 11
                 imm |= (ins & 0b00000000'00001111'11110000'00000000u);          // 19:12
-                imm =  (imm & 0b00000000'00010000'00000000'00000000u)
-                     ? (imm | 0b11111111'11100000'00000000'00000000u) : imm;
+                signExtend(imm, 20);
                 break;
 
             // I
@@ -147,16 +157,15 @@ namespace INSTRUCTION {
                     case 0b011u:    SETMNE(SLTIU);
                     case 0b100u:    SETMNE(XORI);
                     case 0b101u:
-                        if(funct7 == 0b0000000u) SETMNE(SRLI);
-                        if(funct7 == 0b0100000u) SETMNE(SRAI);
+                        if (funct7 == 0b0000000u) SETMNE(SRLI);
+                        if (funct7 == 0b0100000u) SETMNE(SRAI);
                     case 0b110u:    SETMNE(ORI);
                     case 0b111u:    SETMNE(ANDI);
                 }
             case 0b1100111u:        SETMNE(JALR);
                 regFlag = 1;
                 imm =  (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
-                imm =  (imm & 0b00000000'00000000'00001000'00000000u)
-                     ? (imm | 0b11111111'11111111'11110000'00000000u) : imm;
+                signExtend(imm, 11);
                 break;
 
             // S
@@ -168,9 +177,27 @@ namespace INSTRUCTION {
                 }
                 imm =  (ins & 0b11111110'00000000'00000000'00000000u) >> 20u;   // 11:5
                 imm |= (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;    // 4:0
-                imm =  (imm & 0b00000000'00000000'00001000'00000000u)
-                     ? (imm | 0b11111111'11111111'11110000'00000000u) : imm;
+                signExtend(imm, 11);
                 break;
+
+            // R
+            case 0b0110011:
+                switch (funct3) {
+                    case 0b000u:
+                        if (funct7 == 0b0000000u) SETMNE(ADD);
+                        if (funct7 == 0b0100000u) SETMNE(SUB);
+                    case 0b001u:    SETMNE(SLL);
+                    case 0b010u:    SETMNE(SLT);
+                    case 0b011u:    SETMNE(SLTU);
+                    case 0b100u:    SETMNE(XOR);
+                    case 0b101u:
+                        if (funct7 == 0b0000000u) SETMNE(SRL);
+                        if (funct7 == 0b0100000u) SETMNE(SRA);
+                    case 0b110u:    SETMNE(OR);
+                    case 0b111u:    SETMNE(AND);
+                }
+                imm =  (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
+                signExtend(imm, 11);
 
             // SB
             case 0b1100011u:
@@ -186,8 +213,7 @@ namespace INSTRUCTION {
                 imm =  (ins & 0b01111110'00000000'00000000'00000000u) >> 20u;   // 10:5
                 imm |= (ins & 0b00000000'00000000'00001111'00000000u) >> 7u;    // 4:0
                 imm |= (ins & 0b00000000'00000000'00000000'10000000u) << 4u;    // 11
-                imm =  (imm & 0b00000000'00000000'00010000'00000000u)
-                     ? (imm | 0b11111111'11111111'11100000'00000000u) : imm;
+                signExtend(imm, 12);
                 break;
         }
     }
@@ -195,12 +221,12 @@ namespace INSTRUCTION {
 #undef SETMNE
 }
 
-namespace MEMORY {
+namespace STORAGE {
     template<u32 SIZE = 128, typename dataType = u32>
-    struct memoryType {
+    struct storageType {
         dataType data[SIZE];
 
-        memoryType() : data{0} {}
+        storageType() : data{0} {}
 
         void MemInit(std::istream &inputStream) {
             std::string inputString;
@@ -223,7 +249,7 @@ namespace MEMORY {
             }
         }
 
-        memoryType<SIZE, dataType> &operator=(const memoryType<SIZE, dataType> &other) {
+        storageType<SIZE, dataType> &operator=(const storageType<SIZE, dataType> &other) {
             if (*other != *this) memcpy(data, other.data, sizeof(data));
             return *this;
         }
@@ -232,8 +258,7 @@ namespace MEMORY {
     };
 }
 
-using RegisterType = MEMORY::memoryType<32, u32>;
-using MemoryType = MEMORY::memoryType<40960, u8>;
-using BufferType = MEMORY::memoryType<8, u32>;
+using RegisterType = STORAGE::storageType<32, u32>;
+using MemoryType = STORAGE::storageType<40960, u8>;
 
 #endif // RISC_V_SIMULATOR_GLOBAL

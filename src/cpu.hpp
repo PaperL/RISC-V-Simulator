@@ -5,19 +5,18 @@
 #define RISC_V_SIMULATOR_CPU
 
 #include "global.h"
-#include "stage.hpp"
+#include "stage.h"
 #include <iostream>
 
 class cpu {
 private:
     RegisterType *reg;      // register
     MemoryType *mem;        // memory
-    u32 pc;                 // program counter
     stage *pipeline[5];     // 5-stage pipeline
 
 public:
-    cpu() : reg(new RegisterType), mem(new MemoryType), pc(0),
-            pipeline{new stageIF(reg, mem, pc), new stageID(reg, mem), new stageEX(reg, mem),
+    cpu() : reg(new RegisterType), mem(new MemoryType),
+            pipeline{new stageIF(reg, mem), new stageID(reg, mem), new stageEX(reg, mem),
                      new stageMEM(reg, mem), new stageWB(reg, mem)} {
 
     }
@@ -31,8 +30,10 @@ public:
     void init(std::istream &inputStream) { mem->MemInit(inputStream); }
 
     void work() {
-        while (true) {                          // 1 clock
-            for (auto &i : pipeline) i->run();  // each stage work
+        pipeline[0]->valid = 1;                 // begin from IF stage
+        while (true) {                          // simulate cpu clock
+            for (auto &i : pipeline)            // each stage work
+                if (i->valid) i->run();
             for (u32 i = 0; i < 4; ++i) {       // hand over buffer
                 pipeline[i + 1]->preBuffer = pipeline[i]->sucBuffer;
                 pipeline[i]->sucBuffer.clear();

@@ -7,5 +7,6 @@ include_directories(
 )
 set(src_dir
         ${PROJECT_SOURCE_DIR}/src/main.cpp
+        ${PROJECT_SOURCE_DIR}/src/stage.cpp
         )
 add_executable(code ${src_dir})
