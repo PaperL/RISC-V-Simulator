@@ -13,16 +13,18 @@ private:
     MemoryType *mem;        // memory
     stage *pipeline[5];     // 5-stage pipeline
     u32 pc, pc_modified;
-    u32 stopFlag;
+    u32 finishFlag;
     predictor pred;
 
 public:
-    cpu() : reg(new RegisterType), mem(new MemoryType), pc(0), pc_modified(1u), stopFlag(0),
+    cpu() : reg(new RegisterType), mem(new MemoryType), pc(0), pc_modified(-1u), finishFlag(0),
             pipeline{new stageIF(mem, pc, pred),
-                     new stageID(reg, stopFlag),
-                     new stageEX(),
+                     new stageID(reg),
+                     nullptr,
                      new stageMEM(mem, pc_modified, pred),
-                     new stageWB(reg)} {}
+                     new stageWB(reg, finishFlag)} {
+        pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer);
+    }
 
     ~cpu() {
         delete reg;
@@ -33,12 +35,23 @@ public:
     void init(std::istream &inputStream) { mem->MemInit(inputStream); }
 
     void work() {
-        while (!stopFlag) {                                             // simulate cpu clock
+        while (!finishFlag) {                             // simulate cpu clock
+            debugPrint("Period Begin");
 
-            for (int i = 0; i < 5 && !stopFlag; ++i) pipeline[i]->run();// each stage works
-            if (pc_modified != 1u) pc = pc_modified, pc_modified = 1u;  // 1 for no modified pc
-            for (u32 i = 0; i < 4; ++i) {                               // hand over buffer
-                pipeline[i + 1]->preBuffer = pipeline[i]->sucBuffer;
+            reg->data[0] = 0u;
+            pc &= 0xFFFFFFFEu;
+            pc_modified = -1u;
+
+            for (auto &i : pipeline) {
+                i->run();                               // each stage works
+                debugPrint(' ');
+            }
+            debugPrint("Period End\n=================================");
+
+            if (pc_modified != -1u) pc = pc_modified;   // -1 for no modified pc
+
+            for (u32 i = 0; i < 4; ++i) {               // hand over buffer
+                *(pipeline[i + 1]->preBuffer) = *(pipeline[i]->sucBuffer);
                 pipeline[i]->sucBuffer->clear();
             }
         }

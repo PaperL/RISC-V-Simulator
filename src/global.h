@@ -6,8 +6,8 @@
 
 #include <exception>
 #include <iostream>
-#include <sstream>
 #include <string>
+#include <cstring>
 
 using u32 = unsigned int;
 using u8 = unsigned char;
@@ -69,6 +69,7 @@ namespace INSTRUCTION {
      */
     enum insMnemonic {
         NONE,
+        HALT,
         LUI,    // U    Load Upper Immediate
         AUIPC,  // U    Add Upper Immediate to PC
         JAL,    // UJ   Jump & Link
@@ -109,8 +110,8 @@ namespace INSTRUCTION {
     };
 
     inline void decodeIns(const u32 ins,
-                   u32 &instruction, u32 &rs1, u32 &rs2, u32 &rd, u32 &imm,
-                   u32 &regFlag) {
+                          u32 &instruction, u32 &rs1, u32 &rs2, u32 &rd, u32 &imm,
+                          u32 &regFlag) {
         u32 opcode, funct3, funct7;
         opcode = (ins & 0b00000000'00000000'00000000'01111111u);           // Operation Code
         funct3 = (ins & 0b00000000'00000000'01110000'00000000u) >> 12u;    // Function Type 1
@@ -267,16 +268,14 @@ namespace STORAGE {
             while (!inputStream.fail()) {
                 inputStream >> inputString;
                 if (inputString[0] == '@') {
-                    std::stringstream ss;
-                    ss << std::hex << inputString.substr(1, 8);
-                    ss >> ptr;
+                    char *p;
+                    ptr = strtoul(inputString.substr(1, 8).c_str(), &p, 16);
                     printf("\n%d!\n", ptr);
                 }
                 else {
-                    std::stringstream ss;
-                    ss << std::hex << inputString;
-                    ss >> data[ptr];
-                    printf("%d ", data[ptr]);
+                    char *p;
+                    data[ptr] = strtoul(inputString.c_str(), &p, 16);
+                    printf("[%s,%d] ", inputString.c_str(), data[ptr]);
                     ptr++;
                 }
             }
@@ -292,6 +291,16 @@ namespace STORAGE {
 }
 
 using RegisterType = STORAGE::storageType<32, u32>;
-using MemoryType = STORAGE::storageType<40960, u8>;
+using MemoryType = STORAGE::storageType<1048576, u8>;
+
+
+void debugPrint(const auto &info) { std::cout << info << std::endl; }
+
+void debugPrintL(const auto &info) { std::cout << info; }
+
+void debugPrint(const auto &... _argList) {
+    (debugPrintL(_argList), ...);
+    std::cout << std::endl;
+}
 
 #endif // RISC_V_SIMULATOR_GLOBAL

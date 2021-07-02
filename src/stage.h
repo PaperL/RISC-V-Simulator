@@ -15,6 +15,8 @@ public:
             u32 pc = 0;
             u32 predictedPc = 0;
             u32 insContent = 0;
+            u32 rs1 = 0;
+            u32 rs2 = 0;
         } IF_ID;
 
         struct ID_EX_Buffer {
@@ -22,31 +24,34 @@ public:
             u32 pc = 0;
             u32 predictedPc = 0;
             u32 rd = 0;
-            u32 rs1 = 0;    // NOTE:    Here rs1 & rs2 is not register index
-            u32 rs2 = 0;    //          but inside value
+            u32 rs1 = 0;
+            u32 rs2 = 0;
+            u32 rv1 = 0;    // register value
+            u32 rv2 = 0;
             u32 imm = 0;
         } ID_EX;
 
         struct EX_MEM_Buffer {
             u32 pc = 0;
             u32 predictedPc = 0;
-            static const u32 NONE       = 0b0000'0000u;
+            static const u32 NONE = 0b0000'0000u;
+            static const u32 HALT = 0b1111'1111u;
 
-            static const u32 TYPE_1     = 0b0000'0011u;
-            static const u32 REG        = 0b0000'0001u;
-            static const u32 JUMP       = 0b0000'0010u;
+            static const u32 TYPE_1 = 0b0000'0011u;
+            static const u32 REG = 0b0000'0001u;
+            static const u32 JUMP = 0b0000'0010u;
 
-            static const u32 TYPE_2     = 0b0000'1100u;
-            static const u32 BRANCH     = 0b0000'0100u;
-            static const u32 MEM_LOAD   = 0b0000'1000u;
-            static const u32 MEM_STORE  = 0b0000'1100u;
+            static const u32 TYPE_2 = 0b0000'1100u;
+            static const u32 BRANCH = 0b0000'0100u;
+            static const u32 MEM_LOAD = 0b0000'1000u;
+            static const u32 MEM_STORE = 0b0000'1100u;
 
-            static const u32 BRANCH_TAKEN=0b0001'0000u;
+            static const u32 BRANCH_TAKEN = 0b0001'0000u;
 
-            static const u32 MEM_LEN    = 0b0011'0000u;
-            static const u32 MEM_8      = 0b0001'0000u;
-            static const u32 MEM_16     = 0b0010'0000u;
-            static const u32 MEM_32     = 0b0011'0000u;
+            static const u32 MEM_LEN = 0b0011'0000u;
+            static const u32 MEM_8 = 0b0001'0000u;
+            static const u32 MEM_16 = 0b0010'0000u;
+            static const u32 MEM_32 = 0b0011'0000u;
 
             static const u32 MEM_SIGNED = 0b0100'0000u;
 
@@ -59,6 +64,7 @@ public:
 
         struct MEM_WB_Buffer {
             static const u32 NONE = 0b0000u;
+            static const u32 HALT = 0b1111u;
             static const u32 REG = 0b0001u;
             u32 op = NONE;
             u32 rd = 0;     // register destination
@@ -99,10 +105,9 @@ public:
 class stageID : public stage {
 public:
     RegisterType *reg;
-    u32 &stopFlag;
 
-    stageID(RegisterType *globalRegister, u32 &stopFlag)
-            : stage(), reg(globalRegister), stopFlag(stopFlag) {}
+    stageID(RegisterType *globalRegister)
+            : stage(), reg(globalRegister) {}
 
     void run() override;
 };
@@ -112,7 +117,10 @@ public:
 
 class stageEX : public stage {
 public:
-    stageEX() : stage() {}
+    bufferType *EX_MEM_Buffer, *MEM_WB_Buffer;
+
+    stageEX(bufferType *Global_EX_MEM_Buffer, bufferType *Global_MEM_WB_Buffer)
+            : stage(), EX_MEM_Buffer(Global_EX_MEM_Buffer), MEM_WB_Buffer(Global_EX_MEM_Buffer) {}
 
     void run() override;
 };
@@ -139,9 +147,10 @@ public:
 class stageWB : public stage {
 public:
     RegisterType *reg;
+    u32 &finishFlag;
 
-    stageWB(RegisterType *globalRegister)
-            : stage(), reg(globalRegister) {}
+    stageWB(RegisterType *globalRegister, u32 &globalFinishFlag)
+            : stage(), reg(globalRegister), finishFlag(globalFinishFlag) {}
 
     void run() override;
 };
