@@ -14,6 +14,7 @@ using u8 = unsigned char;
 
 namespace HEX {
 
+/*
     const char hexToDec[256] = {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,// 10
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -51,6 +52,12 @@ namespace HEX {
 
     inline u32 char2ToHex(std::string &str) {
         return ((hexToDec[str[0]] << 4) | (hexToDec[str[1]]));
+    }
+    */
+
+    inline void signExtend(u32 &arg, u32 highBit) {
+        if (arg & (1u << highBit))
+            arg |= 0b11111111'11111111'11111111'11111111u << (highBit + 1);
     }
 }
 
@@ -101,22 +108,17 @@ namespace INSTRUCTION {
         AND     // R    AND
     };
 
-    inline void signExtend(u32 &arg, u32 highBit) {
-        if (arg & (1u << highBit))
-            arg |= 0b11111111'11111111'11111111'11111111u << (highBit + 1);
-    }
-
-    void decodeIns(const u32 ins,
+    inline void decodeIns(const u32 ins,
                    u32 &instruction, u32 &rs1, u32 &rs2, u32 &rd, u32 &imm,
                    u32 &regFlag) {
         u32 opcode, funct3, funct7;
-        opcode  = (ins & 0b00000000'00000000'00000000'01111111u);           // Operation Code
-        funct3  = (ins & 0b00000000'00000000'01110000'00000000u) >> 12u;    // Function Type 1
-        funct7  = (ins & 0b11111110'00000000'00000000'00000000u) >> 25u;    // Function Type 2
-        rs1     = (ins & 0b00000000'00001111'10000000'00000000u) >> 15u;    // Register 1
-        rs2     = (ins & 0b00000001'11110000'00000000'00000000u) >> 20u;    // Register 2
-        rd      = (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;     // Memory
-        imm     = 0;
+        opcode = (ins & 0b00000000'00000000'00000000'01111111u);           // Operation Code
+        funct3 = (ins & 0b00000000'00000000'01110000'00000000u) >> 12u;    // Function Type 1
+        funct7 = (ins & 0b11111110'00000000'00000000'00000000u) >> 25u;    // Function Type 2
+        rs1 = (ins & 0b00000000'00001111'10000000'00000000u) >> 15u;    // Register 1
+        rs2 = (ins & 0b00000001'11110000'00000000'00000000u) >> 20u;    // Register 2
+        rd = (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;     // Memory
+        imm = 0;
 
 #define SETMNE(_x) (instruction = ((instruction == insMnemonic::NONE) ? (insMnemonic::_x) : (instruction)))
 
@@ -124,96 +126,127 @@ namespace INSTRUCTION {
         regFlag = 2;
         switch (opcode) {
             // U
-            case 0b0010111u:        SETMNE(AUIPC);
-            case 0b0110111u:        SETMNE(LUI);
+            case 0b0010111u:
+                SETMNE(AUIPC);
+            case 0b0110111u:
+                SETMNE(LUI);
                 regFlag = 0;
-                imm =  (ins & 0b11111111'11111111'11110000'00000000u);   // 31:12
+                imm = (ins & 0b11111111'11111111'11110000'00000000u);   // 31:12
                 break;
 
-            // UJ
-            case 0b1101111u:        SETMNE(JAL);
+                // UJ
+            case 0b1101111u:
+                SETMNE(JAL);
                 regFlag = 0;
-                imm =  (ins & 0b10000000'00000000'00000000'00000000u) >> 11u;   // 20
+                imm = (ins & 0b10000000'00000000'00000000'00000000u) >> 11u;   // 20
                 imm |= (ins & 0b01111111'11100000'00000000'00000000u) >> 20u;   // 10:1
                 imm |= (ins & 0b00000000'00010000'00000000'00000000u) >> 9u;    // 11
                 imm |= (ins & 0b00000000'00001111'11110000'00000000u);          // 19:12
-                signExtend(imm, 20);
+                HEX::signExtend(imm, 20);
                 break;
 
-            // I
+                // I
             case 0b0000011u:
                 switch (funct3) {
-                    case 0b000u:    SETMNE(LB);
-                    case 0b001u:    SETMNE(LH);
-                    case 0b010u:    SETMNE(LW);
-                    case 0b100u:    SETMNE(LBU);
-                    case 0b101u:    SETMNE(LHU);
+                    case 0b000u:
+                        SETMNE(LB);
+                    case 0b001u:
+                        SETMNE(LH);
+                    case 0b010u:
+                        SETMNE(LW);
+                    case 0b100u:
+                        SETMNE(LBU);
+                    case 0b101u:
+                        SETMNE(LHU);
                 }
             case 0b0010011u:
                 switch (funct3) {
-                    case 0b000u:    SETMNE(ADDI);
-                    case 0b001u:    SETMNE(SLLI);    // funct7 == 0b0000000u
-                    case 0b010u:    SETMNE(SLTI);
-                    case 0b011u:    SETMNE(SLTIU);
-                    case 0b100u:    SETMNE(XORI);
+                    case 0b000u:
+                        SETMNE(ADDI);
+                    case 0b001u:
+                        SETMNE(SLLI);    // funct7 == 0b0000000u
+                    case 0b010u:
+                        SETMNE(SLTI);
+                    case 0b011u:
+                        SETMNE(SLTIU);
+                    case 0b100u:
+                        SETMNE(XORI);
                     case 0b101u:
                         if (funct7 == 0b0000000u) SETMNE(SRLI);
                         if (funct7 == 0b0100000u) SETMNE(SRAI);
-                    case 0b110u:    SETMNE(ORI);
-                    case 0b111u:    SETMNE(ANDI);
+                    case 0b110u:
+                        SETMNE(ORI);
+                    case 0b111u:
+                        SETMNE(ANDI);
                 }
-            case 0b1100111u:        SETMNE(JALR);
+            case 0b1100111u:
+                SETMNE(JALR);
                 regFlag = 1;
-                imm =  (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
-                signExtend(imm, 11);
+                imm = (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
+                HEX::signExtend(imm, 11);
                 break;
 
-            // S
+                // S
             case 0b0100011u:
                 switch (funct3) {
-                    case 0b000u:    SETMNE(SB);
-                    case 0b001u:    SETMNE(SH);
-                    case 0b010u:    SETMNE(SW);
+                    case 0b000u:
+                        SETMNE(SB);
+                    case 0b001u:
+                        SETMNE(SH);
+                    case 0b010u:
+                        SETMNE(SW);
                 }
-                imm =  (ins & 0b11111110'00000000'00000000'00000000u) >> 20u;   // 11:5
+                imm = (ins & 0b11111110'00000000'00000000'00000000u) >> 20u;   // 11:5
                 imm |= (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;    // 4:0
-                signExtend(imm, 11);
+                HEX::signExtend(imm, 11);
                 break;
 
-            // R
+                // R
             case 0b0110011:
                 switch (funct3) {
                     case 0b000u:
                         if (funct7 == 0b0000000u) SETMNE(ADD);
                         if (funct7 == 0b0100000u) SETMNE(SUB);
-                    case 0b001u:    SETMNE(SLL);
-                    case 0b010u:    SETMNE(SLT);
-                    case 0b011u:    SETMNE(SLTU);
-                    case 0b100u:    SETMNE(XOR);
+                    case 0b001u:
+                        SETMNE(SLL);
+                    case 0b010u:
+                        SETMNE(SLT);
+                    case 0b011u:
+                        SETMNE(SLTU);
+                    case 0b100u:
+                        SETMNE(XOR);
                     case 0b101u:
                         if (funct7 == 0b0000000u) SETMNE(SRL);
                         if (funct7 == 0b0100000u) SETMNE(SRA);
-                    case 0b110u:    SETMNE(OR);
-                    case 0b111u:    SETMNE(AND);
+                    case 0b110u:
+                        SETMNE(OR);
+                    case 0b111u:
+                        SETMNE(AND);
                 }
-                imm =  (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
-                signExtend(imm, 11);
+                imm = (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
+                HEX::signExtend(imm, 11);
 
-            // SB
+                // SB
             case 0b1100011u:
                 switch (funct3) {
-                    case 0b000u:    SETMNE(BEQ);
-                    case 0b001u:    SETMNE(BNE);
-                    case 0b100u:    SETMNE(BLT);
-                    case 0b101u:    SETMNE(BGE);
-                    case 0b110u:    SETMNE(BLTU);
-                    case 0b111u:    SETMNE(BGEU);
+                    case 0b000u:
+                        SETMNE(BEQ);
+                    case 0b001u:
+                        SETMNE(BNE);
+                    case 0b100u:
+                        SETMNE(BLT);
+                    case 0b101u:
+                        SETMNE(BGE);
+                    case 0b110u:
+                        SETMNE(BLTU);
+                    case 0b111u:
+                        SETMNE(BGEU);
                 }
-                imm =  (ins & 0b10000000'00000000'00000000'00000000u) >> 19u;   // 12
-                imm =  (ins & 0b01111110'00000000'00000000'00000000u) >> 20u;   // 10:5
+                imm = (ins & 0b10000000'00000000'00000000'00000000u) >> 19u;   // 12
+                imm = (ins & 0b01111110'00000000'00000000'00000000u) >> 20u;   // 10:5
                 imm |= (ins & 0b00000000'00000000'00001111'00000000u) >> 7u;    // 4:0
                 imm |= (ins & 0b00000000'00000000'00000000'10000000u) << 4u;    // 11
-                signExtend(imm, 12);
+                HEX::signExtend(imm, 12);
                 break;
         }
     }
@@ -235,7 +268,7 @@ namespace STORAGE {
                 inputStream >> inputString;
                 if (inputString[0] == '@') {
                     std::stringstream ss;
-                    ss << std::hex << inputString.substr(1,8);
+                    ss << std::hex << inputString.substr(1, 8);
                     ss >> ptr;
                     printf("\n%d!\n", ptr);
                 }
@@ -250,7 +283,7 @@ namespace STORAGE {
         }
 
         storageType<SIZE, dataType> &operator=(const storageType<SIZE, dataType> &other) {
-            if (*other != *this) memcpy(data, other.data, sizeof(data));
+            if (&other != *this) memcpy(data, other.data, sizeof(data));
             return *this;
         }
 

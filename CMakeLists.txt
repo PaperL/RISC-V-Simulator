@@ -8,5 +8,8 @@ include_directories(
 set(src_dir
         ${PROJECT_SOURCE_DIR}/src/main.cpp
         ${PROJECT_SOURCE_DIR}/src/stage.cpp
+
+        ${PROJECT_SOURCE_DIR}/src/cpu.hpp
+        ${PROJECT_SOURCE_DIR}/src/predictor.hpp
         )
 add_executable(code ${src_dir})

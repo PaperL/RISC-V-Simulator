@@ -3,7 +3,6 @@
 //
 #pragma region HEADER
 
-#include "global.h"
 #include "cpu.hpp"
 #include <iostream>
 
