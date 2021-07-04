@@ -6,6 +6,7 @@
 
 #include "stage.h"
 #include <iostream>
+#include <iomanip> // std::dec
 
 class cpu {
 private:
@@ -21,9 +22,10 @@ public:
             pipeline{new stageIF(mem, pc, pred),
                      new stageID(reg),
                      nullptr,
-                     new stageMEM(mem, pc_modified, pred),
+                     nullptr,
                      new stageWB(reg, finishFlag)} {
-        pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer);
+        pipeline[3] = new stageMEM(mem, pc_modified, pred, pipeline[4]->preBuffer);
+        pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer); // forward
     }
 
     ~cpu() {
@@ -56,7 +58,7 @@ public:
             }
         }
 
-        std::cout << (reg->data[10] & 0xFFu) << std::endl;              // output answer
+        std::cout << std::dec << (reg->data[10] & 0xFFu) << std::endl;              // output answer
 
         std::cout << "Branch Prediction Succeeded " << pred.success     // output branch prediction result
                   << " Times in all " << pred.tot << " Times." << std::endl;

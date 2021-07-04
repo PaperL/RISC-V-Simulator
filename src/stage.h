@@ -58,6 +58,7 @@ public:
             u32 op = NONE;
             u32 rd = 0;     // register destination
             u32 mt = 0;     // memory target
+            u32 rs2 = 0;   // memory store register source
             u32 cr = 0;     // calculation result
             u32 jd = 0;     // jump destination
         } EX_MEM;
@@ -120,7 +121,7 @@ public:
     bufferType *EX_MEM_Buffer, *MEM_WB_Buffer;
 
     stageEX(bufferType *Global_EX_MEM_Buffer, bufferType *Global_MEM_WB_Buffer)
-            : stage(), EX_MEM_Buffer(Global_EX_MEM_Buffer), MEM_WB_Buffer(Global_EX_MEM_Buffer) {}
+            : stage(), EX_MEM_Buffer(Global_EX_MEM_Buffer), MEM_WB_Buffer(Global_MEM_WB_Buffer) {}
 
     void run() override;
 };
@@ -134,9 +135,10 @@ public:
     u32 &pc;
     u32 stall = 0;
     predictor &pred;
+    bufferType *MEM_WB_Buffer;
 
-    stageMEM(MemoryType *globalMemory, u32 &globalPC, predictor &globalPredictor)
-            : stage(), mem(globalMemory), pc(globalPC), pred(globalPredictor) {}
+    stageMEM(MemoryType *globalMemory, u32 &globalPC, predictor &globalPredictor, bufferType *global_MEM_WB_Buffer)
+            : stage(), mem(globalMemory), pc(globalPC), pred(globalPredictor), MEM_WB_Buffer(global_MEM_WB_Buffer) {}
 
     void run() override;
 };

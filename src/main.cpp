@@ -9,6 +9,7 @@
 #pragma  endregion HEADER
 
 int main() {
+    std::cout << std::hex << std::endl;
     try {
         cpu *RISC_V_Simulator = new cpu();
         RISC_V_Simulator->init(std::cin);

@@ -26,7 +26,10 @@ public:
         else return npc;
     }
 
-    void update(u32 pc, bool jump, u32 jumpAddr) {  // change state
+    void update(u32 pc, bool jump, u32 jumpAddr, bool scss) {  // change state
+        tot++;
+        if (scss) success++;
+
         if (jump && bht[pc & 0xFFFu] < 0b11u) bht[pc & 0xFFFu]++;
         else if (!jump && bht[pc & 0xFFFu] > 0b00u) bht[pc & 0xFFFu]--;
         btb[pc & 0xFFu] = jumpAddr;

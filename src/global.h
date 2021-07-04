@@ -4,10 +4,13 @@
 #ifndef RISC_V_SIMULATOR_GLOBAL
 #define RISC_V_SIMULATOR_GLOBAL
 
+#define RISC_V_SIMULATOR_DEBUG
+
 #include <exception>
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <iomanip> // std::hex
 
 using u32 = unsigned int;
 using u8 = unsigned char;
@@ -265,7 +268,7 @@ namespace STORAGE {
         void MemInit(std::istream &inputStream) {
             std::string inputString;
             u32 ptr = 0;
-            while (!inputStream.fail()) {
+            while (!inputStream.fail() && inputString != "###") {
                 inputStream >> inputString;
                 if (inputString[0] == '@') {
                     char *p;
@@ -294,13 +297,19 @@ using RegisterType = STORAGE::storageType<32, u32>;
 using MemoryType = STORAGE::storageType<1048576, u8>;
 
 
-void debugPrint(const auto &info) { std::cout << info << std::endl; }
+void debugPrint(const auto &info) {
+#ifdef RISC_V_SIMULATOR_DEBUG
+    std::cout << info << std::endl;
+#endif
+}
 
 void debugPrintL(const auto &info) { std::cout << info; }
 
 void debugPrint(const auto &... _argList) {
+#ifdef RISC_V_SIMULATOR_DEBUG
     (debugPrintL(_argList), ...);
     std::cout << std::endl;
+#endif
 }
 
 #endif // RISC_V_SIMULATOR_GLOBAL
