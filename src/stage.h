@@ -119,9 +119,11 @@ public:
 class stageEX : public stage {
 public:
     bufferType *EX_MEM_Buffer, *MEM_WB_Buffer;
+    u32 &IF_ID_EX_Stall_Flag;
 
-    stageEX(bufferType *Global_EX_MEM_Buffer, bufferType *Global_MEM_WB_Buffer)
-            : stage(), EX_MEM_Buffer(Global_EX_MEM_Buffer), MEM_WB_Buffer(Global_MEM_WB_Buffer) {}
+    stageEX(bufferType *Global_EX_MEM_Buffer, bufferType *Global_MEM_WB_Buffer, u32 &Global_IF_ID_Stall_Flag)
+            : stage(), IF_ID_EX_Stall_Flag(Global_IF_ID_Stall_Flag),
+              EX_MEM_Buffer(Global_EX_MEM_Buffer), MEM_WB_Buffer(Global_MEM_WB_Buffer) {}
 
     void run() override;
 };
@@ -133,12 +135,13 @@ class stageMEM : public stage {
 public:
     MemoryType *mem;
     u32 &pc;
-    u32 stall = 0;
+    u32 &stall;
     predictor &pred;
     bufferType *MEM_WB_Buffer;
 
-    stageMEM(MemoryType *globalMemory, u32 &globalPC, predictor &globalPredictor, bufferType *global_MEM_WB_Buffer)
-            : stage(), mem(globalMemory), pc(globalPC), pred(globalPredictor), MEM_WB_Buffer(global_MEM_WB_Buffer) {}
+    stageMEM(MemoryType *globalMemory, u32 &globalPC, predictor &globalPredictor, bufferType *global_MEM_WB_Buffer,u32 &Global_MEM_Stall_Flag)
+            : stage(), stall(Global_MEM_Stall_Flag),
+              mem(globalMemory), pc(globalPC), pred(globalPredictor), MEM_WB_Buffer(global_MEM_WB_Buffer) {}
 
     void run() override;
 };

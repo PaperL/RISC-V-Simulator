@@ -12,7 +12,8 @@ class predictor {
 public:
     u32 tot, success;
 
-    u8 bht[4096], btb[256];                     // Branch History Table & Branch Target Buffer
+    u8 bht[4096];                     // Branch History Table & Branch Target Buffer
+    u32 btb[256];
 
     predictor() : tot(0), success(0) {
         memset(bht, 0b01u, sizeof(bht)); // default weakly not taken

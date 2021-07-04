@@ -22,13 +22,13 @@ void stageIF::run() {
 //======================== Instruction Decode =========================
 
 void stageID::run() {
+    debugPrint("IF: PC  = ", preBuffer->IF_ID.pc);
+    debugPrint("IF: ppc = ", preBuffer->IF_ID.predictedPc);
+    debugPrint("IF: ins = ", preBuffer->IF_ID.insContent);
+
     const auto &preBuf = preBuffer->IF_ID;
     auto &sucBuf = sucBuffer->ID_EX;
     u32 regFlag = 0;
-
-    debugPrint("IF: PC  = ", preBuf.pc);
-    debugPrint("IF: ppc = ", preBuf.predictedPc);
-    debugPrint("IF: ins = ", preBuf.insContent);
 
     sucBuf.pc = preBuf.pc;
     sucBuf.predictedPc = preBuf.predictedPc;
@@ -93,15 +93,21 @@ void stageEX::run() {
     debugPrint("EX: FORWARDING");
     debugPrint("rs1(", rs1, "), rs2(", rs2,
                "), rv1(", rv1, "), rv2(", rv2,
-               ")\nEX_MEM.rd(", EX_MEM_Buffer->EX_MEM.rd,
-               "), EX_MEM.cr(", EX_MEM_Buffer->EX_MEM.cr, ")");
+               ")\nEX_MEM.rd(", EX_MEM_Buffer->EX_MEM.rd, "), EX_MEM.cr(", EX_MEM_Buffer->EX_MEM.cr,
+               ")\nMEM_WB.rd(", MEM_WB_Buffer->MEM_WB.rd, "), MEM_WB.cr(", MEM_WB_Buffer->MEM_WB.cr, ")");
+
+    if ((EX_MEM_Buffer->EX_MEM.op & bufferType::EX_MEM_Buffer::TYPE_2) == bufferType::EX_MEM_Buffer::MEM_LOAD) {
+        IF_ID_EX_Stall_Flag = 1u;
+        return;
+    }
+
     if (rs1 != 0) {
-        rv1 = (rs1 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv1;
         rv1 = (rs1 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv1;
+        rv1 = (rs1 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv1;   // EX_MEM data is after MEM_WB data
     }
     if (rs2 != 0) {
-        rv2 = (rs2 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv2;
         rv2 = (rs2 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv2;
+        rv2 = (rs2 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv2;
     }
 
     sucBuf.op = OP::NONE;
@@ -137,31 +143,37 @@ void stageEX::run() {
         case INS::BEQ:      // jump to (pc+imm)
             sucBuf.op = OP::BRANCH;
             if (rv1 == rv2) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
+            else sucBuf.jd = pc + 4;
             break;
 
         case INS::BNE:
             sucBuf.op = OP::BRANCH;
             if (rv1 != rv2) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
+            else sucBuf.jd = pc + 4;
             break;
 
         case INS::BLT:
             sucBuf.op = OP::BRANCH;
             if (int(rv1) < int(rv2)) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
+            else sucBuf.jd = pc + 4;
             break;
 
         case INS::BGE:
             sucBuf.op = OP::BRANCH;
             if (int(rv1) >= (rv2)) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
+            else sucBuf.jd = pc + 4;
             break;
 
         case INS::BLTU:
             sucBuf.op = OP::BRANCH;
             if (rv1 < rv2) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
+            else sucBuf.jd = pc + 4;
             break;
 
         case INS::BGEU:
             sucBuf.op = OP::BRANCH;
             if (rv1 >= rv2) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
+            else sucBuf.jd = pc + 4;
             break;
 
         case INS::LB:       // reg->data[rd] = signExtend(mem->data[rv1+offset], 7);
@@ -322,10 +334,7 @@ void stageMEM::run() {
     debugPrint("EX: mt  = ", preBuffer->EX_MEM.mt);
     debugPrint("EX: jd  = ", preBuffer->EX_MEM.jd);
 
-    if (stall > 0) {
-        stall--;
-        return;
-    }
+    if (stall > 0) return;
 
     const auto &preBuf = preBuffer->EX_MEM;
     auto &sucBuf = sucBuffer->MEM_WB;
@@ -334,16 +343,16 @@ void stageMEM::run() {
     const u32 &op = preBuf.op;
     const u32 &opType1 = preBuf.op & MEM_OP::TYPE_1;
     const u32 &opType2 = preBuf.op & MEM_OP::TYPE_2;
-    u32 cr = preBuf.cr;
+    u32 MEM_STORE_cr = preBuf.cr;
     sucBuf.op = WB_OP::NONE;
 
     if (MEM_WB_Buffer->MEM_WB.rd != 0 && MEM_WB_Buffer->MEM_WB.rd == preBuf.rs2) {
-        cr = MEM_WB_Buffer->MEM_WB.cr;
-        debugPrint("WB CR Forward to MEM");
+        MEM_STORE_cr = MEM_WB_Buffer->MEM_WB.cr;
+        debugPrint("WB CR Forward to MEM, ", MEM_STORE_cr);
     }
 
     if (op == MEM_OP::HALT) {  // program end
-        stall = 3;
+        stall = 4;
         sucBuf.op = WB_OP::HALT;
         debugPrint("MEM: HALT");
         return;
@@ -352,12 +361,12 @@ void stageMEM::run() {
     if (opType1 & MEM_OP::REG) {
         sucBuf.op |= WB_OP::REG;
         sucBuf.rd = preBuf.rd;
-        sucBuf.cr = cr;
+        sucBuf.cr = preBuf.cr;
         debugPrint("MEM: REG");
     }
     if (opType1 & MEM_OP::JUMP) {
         pc = preBuf.jd;
-        stall = 3;  // wait for new instruction
+        stall = 4;  // wait for new instruction
         debugPrint("MEM: JUMP = ", preBuf.jd);
     }
 
@@ -385,28 +394,29 @@ void stageMEM::run() {
     else if (opType2 == MEM_OP::MEM_STORE) {
         switch (op & MEM_OP::MEM_LEN) {
             case MEM_OP::MEM_8:
-                mem->data[preBuf.mt] = cr;
+                mem->data[preBuf.mt] = MEM_STORE_cr;
                 break;
 
             case MEM_OP::MEM_16:
-                mem->data[preBuf.mt] = cr;
-                mem->data[preBuf.mt + 1] = cr >> 8u;
+                mem->data[preBuf.mt] = MEM_STORE_cr;
+                mem->data[preBuf.mt + 1] = MEM_STORE_cr >> 8u;
                 break;
 
             case MEM_OP::MEM_32:
-                mem->data[preBuf.mt] = cr;
-                mem->data[preBuf.mt + 1] = cr >> 8u;
-                mem->data[preBuf.mt + 2] = cr >> 16u;
-                mem->data[preBuf.mt + 3] = cr >> 24u;
+                mem->data[preBuf.mt] = MEM_STORE_cr;
+                mem->data[preBuf.mt + 1] = MEM_STORE_cr >> 8u;
+                mem->data[preBuf.mt + 2] = MEM_STORE_cr >> 16u;
+                mem->data[preBuf.mt + 3] = MEM_STORE_cr >> 24u;
                 break;
         }
+        debugPrint("MEM: STORE = ", MEM_STORE_cr);
     }
     else if (opType2 == MEM_OP::BRANCH) {
         pred.update(preBuf.pc, op & MEM_OP::BRANCH_TAKEN, preBuf.jd, preBuf.predictedPc == preBuf.jd);
         debugPrint("MEM: BRANCH_TAKEN = ", (op & MEM_OP::BRANCH_TAKEN) ? 1u : 0u);
         if (preBuf.predictedPc != preBuf.jd) {
             pc = preBuf.jd;
-            stall = 3;  // invalid wrong branch instruction
+            stall = 4;  // invalid wrong branch instruction
             debugPrint("MEM: BRANCH = WRONG");
         }
         else debugPrint("MEM: BRANCH = RIGHT");

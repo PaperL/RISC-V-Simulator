@@ -13,19 +13,20 @@ private:
     RegisterType *reg;      // register
     MemoryType *mem;        // memory
     stage *pipeline[5];     // 5-stage pipeline
-    u32 pc, pc_modified;
-    u32 finishFlag;
+    u32 pc, pc_modified, lastPC;
+    u32 IF_ID_EX_Stall_Flag, MEM_Stall_Flag, finishFlag;
     predictor pred;
 
 public:
-    cpu() : reg(new RegisterType), mem(new MemoryType), pc(0), pc_modified(-1u), finishFlag(0),
+    cpu() : reg(new RegisterType), mem(new MemoryType),
+            pc(0), pc_modified(-1u), lastPC(0), IF_ID_EX_Stall_Flag(0), MEM_Stall_Flag(0), finishFlag(0),
             pipeline{new stageIF(mem, pc, pred),
                      new stageID(reg),
                      nullptr,
                      nullptr,
                      new stageWB(reg, finishFlag)} {
-        pipeline[3] = new stageMEM(mem, pc_modified, pred, pipeline[4]->preBuffer);
-        pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer); // forward
+        pipeline[3] = new stageMEM(mem, pc_modified, pred, pipeline[4]->preBuffer, MEM_Stall_Flag);
+        pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer, IF_ID_EX_Stall_Flag); // forward
     }
 
     ~cpu() {
@@ -43,6 +44,8 @@ public:
             reg->data[0] = 0u;
             pc &= 0xFFFFFFFEu;
             pc_modified = -1u;
+            lastPC = pc;
+            IF_ID_EX_Stall_Flag = 0;
 
             for (auto &i : pipeline) {
                 i->run();                               // each stage works
@@ -52,12 +55,25 @@ public:
 
             if (pc_modified != -1u) pc = pc_modified;   // -1 for no modified pc
 
-            for (u32 i = 0; i < 4; ++i) {               // hand over buffer
-                *(pipeline[i + 1]->preBuffer) = *(pipeline[i]->sucBuffer);
-                pipeline[i]->sucBuffer->clear();
+            if (!IF_ID_EX_Stall_Flag || MEM_Stall_Flag) {   // ignore stall when jump
+                for (u32 i = 0; i < 4; ++i) {               // hand over buffer
+                    *(pipeline[i + 1]->preBuffer) = *(pipeline[i]->sucBuffer);
+                    pipeline[i]->sucBuffer->clear();
+                }
             }
+            else { // stall IF,ID,EX stage for 1 period
+                debugPrint("IF_ID_EX_Stall_Flag = 1");
+                for (u32 i = 2; i < 4; ++i) {
+                    *(pipeline[i + 1]->preBuffer) = *(pipeline[i]->sucBuffer);
+                    pipeline[i]->sucBuffer->clear();
+                }
+                pc = lastPC;
+            }
+
+            if (MEM_Stall_Flag > 0) MEM_Stall_Flag--;
         }
 
+        debugPrint("HEX Ans = ", reg->data[10]);
         std::cout << std::dec << (reg->data[10] & 0xFFu) << std::endl;              // output answer
 
         std::cout << "Branch Prediction Succeeded " << pred.success     // output branch prediction result
