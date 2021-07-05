@@ -53,7 +53,8 @@ public:
                 debugPrint(' ');
             }
             debugPrint("Period End\n=================================");
-
+            if (pc == 0x1200u)
+                debugPrint("reach");
             if (pc_modified != -1u) pc = pc_modified;   // -1 for no modified pc
 
             if (!IF_ID_EX_Stall_Flag || MEM_Stall_Flag) {
@@ -72,8 +73,13 @@ public:
             }
 
             if (MEM_Stall_Flag) MEM_Stall_Flag--;
-        }
 
+//            if (!MEM_Stall_Flag && !IF_ID_EX_Stall_Flag) {
+//                std::cout << std::hex << '#' << pc << '\n';
+//                for (unsigned int ii : reg->data) std::cout << ii << ' ';
+//                std::cout << std::endl;
+//            }
+        }
         debugPrint("HEX Ans = ", reg->data[10]);
         std::cout << std::dec << (reg->data[10] & 0xFFu) << std::endl;              // output answer
 
