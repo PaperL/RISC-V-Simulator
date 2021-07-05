@@ -64,6 +64,8 @@ public:
         } EX_MEM;
 
         struct MEM_WB_Buffer {
+            u32 pc;
+
             static const u32 NONE = 0b0000u;
             static const u32 HALT = 0b1111u;
             static const u32 REG = 0b0001u;
@@ -73,6 +75,7 @@ public:
         } MEM_WB;
 
         struct WB_Result_Buffer {
+
             u32 rd = 0;
             u32 cr = 0;
         } WB_Result;

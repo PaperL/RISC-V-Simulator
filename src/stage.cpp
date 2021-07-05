@@ -7,6 +7,7 @@
 //======================== Instruction Fetch ==========================
 
 void stageIF::run() {
+
     auto &sucBuf = sucBuffer->IF_ID;
 
     sucBuf.pc = pc;
@@ -22,6 +23,9 @@ void stageIF::run() {
 //======================== Instruction Decode =========================
 
 void stageID::run() {
+    if (preBuffer->IF_ID.pc == 0x1200u && reg->data[13] == 2u)
+        debugPrint("here");
+
     debugPrint("IF: PC  = ", preBuffer->IF_ID.pc);
     debugPrint("IF: ppc = ", preBuffer->IF_ID.predictedPc);
     debugPrint("IF: ins = ", preBuffer->IF_ID.insContent);
@@ -97,7 +101,7 @@ void stageEX::run() {
                ")\nMEM_WB.rd(", MEM_WB_Buffer->MEM_WB.rd, "), MEM_WB.cr(", MEM_WB_Buffer->MEM_WB.cr,
                ")\nWB_Result.rd(", WB_Result->WB_Result.rd, "), WB_Result.cr(", WB_Result->WB_Result.cr, ")");
 
-    if (!MEM_Stall_Flag) {  // forbid forwarding when MEM stall
+    if (!MEM_Stall_Flag && !IF_ID_EX_Stall_Flag) {  // forbid forwarding when MEM stall
         // MEM & WB must be empty when right instruction reaches EX
         if ((EX_MEM_Buffer->EX_MEM.op & bufferType::EX_MEM_Buffer::TYPE_2) == bufferType::EX_MEM_Buffer::MEM_LOAD) {
             if ((rs1 != 0 && rs1 == EX_MEM_Buffer->EX_MEM.rd)
@@ -246,12 +250,12 @@ void stageEX::run() {
 
         case INS::ORI:
             sucBuf.op = OP::REG;
-            sucBuf.cr = rv1 or imm;
+            sucBuf.cr = rv1 bitor imm;
             break;
 
         case INS::ANDI:
             sucBuf.op = OP::REG;
-            sucBuf.cr = rv1 and imm;
+            sucBuf.cr = rv1 bitand imm;
             break;
 
         case INS::SLLI:     // reg->data[rd] = rv1 << (imm & 0b11111u);
@@ -315,12 +319,12 @@ void stageEX::run() {
 
         case INS::OR:
             sucBuf.op = OP::REG;
-            sucBuf.cr = rv1 or rv2;
+            sucBuf.cr = rv1 bitor rv2;
             break;
 
         case INS::AND:
             sucBuf.op = OP::REG;
-            sucBuf.cr = rv1 and rv2;
+            sucBuf.cr = rv1 bitand rv2;
             break;
 
         case INS::HALT:
@@ -355,6 +359,8 @@ void stageMEM::run() {
     const u32 &opType2 = preBuf.op & MEM_OP::TYPE_2;
     u32 MEM_STORE_cr = preBuf.cr;
     sucBuf.op = WB_OP::NONE;
+
+    sucBuf.pc = preBuf.pc;
 
     if (MEM_WB_Buffer->MEM_WB.rd != 0 && MEM_WB_Buffer->MEM_WB.rd == preBuf.rs2) {
         MEM_STORE_cr = MEM_WB_Buffer->MEM_WB.cr;
@@ -458,4 +464,11 @@ void stageWB::run() {
         sucBuf.rd = preBuf.rd;
         sucBuf.cr = preBuf.cr;
     }
+
+//    if (preBuf.pc != 0) {
+//        std::cout << std::hex << '#' << preBuf.pc << '\n';
+//        std::cout << "0 ";
+//        for (u32 i = 1; i < 32; i++) std::cout << reg->data[i] << ' ';
+//        std::cout << std::endl;
+//    }
 }
