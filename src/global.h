@@ -4,7 +4,8 @@
 #ifndef RISC_V_SIMULATOR_GLOBAL
 #define RISC_V_SIMULATOR_GLOBAL
 
-#define RISC_V_SIMULATOR_DEBUG
+// #define RISC_V_SIMULATOR_DEBUG
+// #define RISC_V_SIMULATOR_PREDICTION_RESULT
 
 #include <exception>
 #include <iostream>
@@ -127,7 +128,7 @@ namespace INSTRUCTION {
 #define SETMNE(_x) (instruction = ((instruction == insMnemonic::NONE) ? (insMnemonic::_x) : (instruction)))
 
         instruction = insMnemonic::NONE;
-        regFlag = 2;
+        regFlag = 0;
         switch (opcode) {
             // U
             case 0b0010111u:
@@ -200,6 +201,7 @@ namespace INSTRUCTION {
                     case 0b010u:
                         SETMNE(SW);
                 }
+                regFlag = 2;
                 imm = (ins & 0b11111110'00000000'00000000'00000000u) >> 20u;   // 11:5
                 imm |= (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;    // 4:0
                 HEX::signExtend(imm, 11);
@@ -227,8 +229,10 @@ namespace INSTRUCTION {
                     case 0b111u:
                         SETMNE(AND);
                 }
+                regFlag = 2;
                 imm = (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
                 HEX::signExtend(imm, 11);
+                break;
 
                 // SB
             case 0b1100011u:
@@ -246,6 +250,7 @@ namespace INSTRUCTION {
                     case 0b111u:
                         SETMNE(BGEU);
                 }
+                regFlag = 2;
                 imm  = (ins & 0b10000000'00000000'00000000'00000000u) >> 19u;   // 12
                 imm |= (ins & 0b01111110'00000000'00000000'00000000u) >> 20u;   // 10:5
                 imm |= (ins & 0b00000000'00000000'00001111'00000000u) >> 7u;    // 4:1
@@ -273,12 +278,12 @@ namespace STORAGE {
                 if (inputString[0] == '@') {
                     char *p;
                     ptr = strtoul(inputString.substr(1, 8).c_str(), &p, 16);
-                    printf("\n%d!\n", ptr);
+                    // printf("\n%d!\n", ptr);
                 }
                 else {
                     char *p;
                     data[ptr] = strtoul(inputString.c_str(), &p, 16);
-                    printf("[%s,%d] ", inputString.c_str(), data[ptr]);
+                    // printf("[%s,%d] ", inputString.c_str(), data[ptr]);
                     ptr++;
                 }
             }

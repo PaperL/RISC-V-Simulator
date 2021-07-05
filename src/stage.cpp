@@ -94,20 +94,30 @@ void stageEX::run() {
     debugPrint("rs1(", rs1, "), rs2(", rs2,
                "), rv1(", rv1, "), rv2(", rv2,
                ")\nEX_MEM.rd(", EX_MEM_Buffer->EX_MEM.rd, "), EX_MEM.cr(", EX_MEM_Buffer->EX_MEM.cr,
-               ")\nMEM_WB.rd(", MEM_WB_Buffer->MEM_WB.rd, "), MEM_WB.cr(", MEM_WB_Buffer->MEM_WB.cr, ")");
+               ")\nMEM_WB.rd(", MEM_WB_Buffer->MEM_WB.rd, "), MEM_WB.cr(", MEM_WB_Buffer->MEM_WB.cr,
+               ")\nWB_Result.rd(", WB_Result->WB_Result.rd, "), WB_Result.cr(", WB_Result->WB_Result.cr, ")");
 
-    if ((EX_MEM_Buffer->EX_MEM.op & bufferType::EX_MEM_Buffer::TYPE_2) == bufferType::EX_MEM_Buffer::MEM_LOAD) {
-        IF_ID_EX_Stall_Flag = 1u;
-        return;
-    }
+    if (!MEM_Stall_Flag) {  // forbid forwarding when MEM stall
+        // MEM & WB must be empty when right instruction reaches EX
+        if ((EX_MEM_Buffer->EX_MEM.op & bufferType::EX_MEM_Buffer::TYPE_2) == bufferType::EX_MEM_Buffer::MEM_LOAD) {
+            if ((rs1 != 0 && rs1 == EX_MEM_Buffer->EX_MEM.rd)
+                || (rs2 != 0 && rs2 == EX_MEM_Buffer->EX_MEM.rd)) {
+                IF_ID_EX_Stall_Flag = 1u;
+                return;
+            }
+        }
 
-    if (rs1 != 0) {
-        rv1 = (rs1 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv1;
-        rv1 = (rs1 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv1;   // EX_MEM data is after MEM_WB data
-    }
-    if (rs2 != 0) {
-        rv2 = (rs2 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv2;
-        rv2 = (rs2 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv2;
+        if (rs1 != 0) {
+            rv1 = (rs1 == WB_Result->WB_Result.rd) ? WB_Result->WB_Result.cr : rv1;
+            rv1 = (rs1 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv1;
+            rv1 = (rs1 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv1;
+            // sort by instruction order, late instruction result should overwrite early ones'
+        }
+        if (rs2 != 0) {
+            rv2 = (rs2 == WB_Result->WB_Result.rd) ? WB_Result->WB_Result.cr : rv2;
+            rv2 = (rs2 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv2;
+            rv2 = (rs2 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv2;
+        }
     }
 
     sucBuf.op = OP::NONE;
@@ -160,7 +170,7 @@ void stageEX::run() {
 
         case INS::BGE:
             sucBuf.op = OP::BRANCH;
-            if (int(rv1) >= (rv2)) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
+            if (int(rv1) >= int(rv2)) sucBuf.op |= OP::BRANCH_TAKEN, sucBuf.jd = pc + imm;
             else sucBuf.jd = pc + 4;
             break;
 
@@ -334,7 +344,7 @@ void stageMEM::run() {
     debugPrint("EX: mt  = ", preBuffer->EX_MEM.mt);
     debugPrint("EX: jd  = ", preBuffer->EX_MEM.jd);
 
-    if (stall > 0) return;
+    if (stall > 0) return; // maybe this line is useless
 
     const auto &preBuf = preBuffer->EX_MEM;
     auto &sucBuf = sucBuffer->MEM_WB;
@@ -428,6 +438,7 @@ void stageMEM::run() {
 
 void stageWB::run() {
     const auto &preBuf = preBuffer->MEM_WB;
+    auto &sucBuf = sucBuffer->WB_Result;
     using WB_OP = stage::bufferType::MEM_WB_Buffer;
     const u32 &op = preBuf.op;
 
@@ -440,5 +451,11 @@ void stageWB::run() {
         return;
     }
 
-    if (op & WB_OP::REG) reg->data[preBuf.rd] = preBuf.cr;
+    sucBuffer->clear();
+
+    if (op & WB_OP::REG) {
+        reg->data[preBuf.rd] = preBuf.cr;
+        sucBuf.rd = preBuf.rd;
+        sucBuf.cr = preBuf.cr;
+    }
 }

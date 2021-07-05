@@ -26,7 +26,8 @@ public:
                      nullptr,
                      new stageWB(reg, finishFlag)} {
         pipeline[3] = new stageMEM(mem, pc_modified, pred, pipeline[4]->preBuffer, MEM_Stall_Flag);
-        pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer, IF_ID_EX_Stall_Flag); // forward
+        pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer, pipeline[4]->sucBuffer,
+                                  IF_ID_EX_Stall_Flag, MEM_Stall_Flag); // forward
     }
 
     ~cpu() {
@@ -55,31 +56,34 @@ public:
 
             if (pc_modified != -1u) pc = pc_modified;   // -1 for no modified pc
 
-            if (!IF_ID_EX_Stall_Flag || MEM_Stall_Flag) {   // ignore stall when jump
-                for (u32 i = 0; i < 4; ++i) {               // hand over buffer
+            if (!IF_ID_EX_Stall_Flag || MEM_Stall_Flag) {
+                for (u32 i = 0; i < 4; i++) {               // hand over buffer
                     *(pipeline[i + 1]->preBuffer) = *(pipeline[i]->sucBuffer);
                     pipeline[i]->sucBuffer->clear();
                 }
             }
             else { // stall IF,ID,EX stage for 1 period
                 debugPrint("IF_ID_EX_Stall_Flag = 1");
-                for (u32 i = 2; i < 4; ++i) {
+                for (u32 i = 2; i < 4; i++) {
                     *(pipeline[i + 1]->preBuffer) = *(pipeline[i]->sucBuffer);
                     pipeline[i]->sucBuffer->clear();
                 }
                 pc = lastPC;
             }
 
-            if (MEM_Stall_Flag > 0) MEM_Stall_Flag--;
+            if (MEM_Stall_Flag) MEM_Stall_Flag--;
         }
 
         debugPrint("HEX Ans = ", reg->data[10]);
         std::cout << std::dec << (reg->data[10] & 0xFFu) << std::endl;              // output answer
 
+#ifdef RISC_V_SIMULATOR_PREDICTION_RESULT
         std::cout << "Branch Prediction Succeeded " << pred.success     // output branch prediction result
                   << " Times in all " << pred.tot << " Times." << std::endl;
         std::cout << "Prediction Success Rate: "
                   << double(pred.success) / double(pred.tot) << std::endl;
+#endif
+
     }
 };
 
