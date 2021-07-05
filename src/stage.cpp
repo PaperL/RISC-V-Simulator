@@ -23,9 +23,6 @@ void stageIF::run() {
 //======================== Instruction Decode =========================
 
 void stageID::run() {
-    if (preBuffer->IF_ID.pc == 0x1200u && reg->data[13] == 2u)
-        debugPrint("here");
-
     debugPrint("IF: PC  = ", preBuffer->IF_ID.pc);
     debugPrint("IF: ppc = ", preBuffer->IF_ID.predictedPc);
     debugPrint("IF: ins = ", preBuffer->IF_ID.insContent);
@@ -68,6 +65,7 @@ void stageID::run() {
 //============================= Execute ===============================
 
 void stageEX::run() {
+
     const auto &preBuf = preBuffer->ID_EX;
     auto &sucBuf = sucBuffer->EX_MEM;
     using INS = INSTRUCTION::insMnemonic;
@@ -99,26 +97,35 @@ void stageEX::run() {
                "), rv1(", rv1, "), rv2(", rv2,
                ")\nEX_MEM.rd(", EX_MEM_Buffer->EX_MEM.rd, "), EX_MEM.cr(", EX_MEM_Buffer->EX_MEM.cr,
                ")\nMEM_WB.rd(", MEM_WB_Buffer->MEM_WB.rd, "), MEM_WB.cr(", MEM_WB_Buffer->MEM_WB.cr,
-               ")\nWB_Result.rd(", WB_Result->WB_Result.rd, "), WB_Result.cr(", WB_Result->WB_Result.cr, ")");
+               ")\nlastRD(", lastRD, "), lastCR(", lastCR, ")");
 
-    if (!MEM_Stall_Flag && !IF_ID_EX_Stall_Flag) {  // forbid forwarding when MEM stall
+    if (IF_ID_EX_Stall_Flag) {
+        if (rs1 != 0) rv1 = IF_ID_EX_Stall_rv1;
+        if (rs2 != 0) rv2 = IF_ID_EX_Stall_rv2;
+    }
+    IF_ID_EX_Stall_Flag = 0u;
+    IF_ID_EX_Stall_rv1 = IF_ID_EX_Stall_rv2 = 0u;
+
+    if (!MEM_Stall_Flag) {  // forbid forwarding when MEM stall
         // MEM & WB must be empty when right instruction reaches EX
         if ((EX_MEM_Buffer->EX_MEM.op & bufferType::EX_MEM_Buffer::TYPE_2) == bufferType::EX_MEM_Buffer::MEM_LOAD) {
             if ((rs1 != 0 && rs1 == EX_MEM_Buffer->EX_MEM.rd)
                 || (rs2 != 0 && rs2 == EX_MEM_Buffer->EX_MEM.rd)) {
                 IF_ID_EX_Stall_Flag = 1u;
+                if (rs1 != 0) IF_ID_EX_Stall_rv1 = (rs1 == lastRD) ? lastCR : rv1;
+                if (rs2 != 0) IF_ID_EX_Stall_rv2 = (rs2 == lastRD) ? lastCR : rv2;
                 return;
             }
         }
 
         if (rs1 != 0) {
-            rv1 = (rs1 == WB_Result->WB_Result.rd) ? WB_Result->WB_Result.cr : rv1;
+            rv1 = (rs1 == lastRD) ? lastCR : rv1;
             rv1 = (rs1 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv1;
             rv1 = (rs1 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv1;
             // sort by instruction order, late instruction result should overwrite early ones'
         }
         if (rs2 != 0) {
-            rv2 = (rs2 == WB_Result->WB_Result.rd) ? WB_Result->WB_Result.cr : rv2;
+            rv2 = (rs2 == lastRD) ? lastCR : rv2;
             rv2 = (rs2 == MEM_WB_Buffer->MEM_WB.rd) ? MEM_WB_Buffer->MEM_WB.cr : rv2;
             rv2 = (rs2 == EX_MEM_Buffer->EX_MEM.rd) ? EX_MEM_Buffer->EX_MEM.cr : rv2;
         }
@@ -444,7 +451,6 @@ void stageMEM::run() {
 
 void stageWB::run() {
     const auto &preBuf = preBuffer->MEM_WB;
-    auto &sucBuf = sucBuffer->WB_Result;
     using WB_OP = stage::bufferType::MEM_WB_Buffer;
     const u32 &op = preBuf.op;
 
@@ -461,14 +467,19 @@ void stageWB::run() {
 
     if (op & WB_OP::REG) {
         reg->data[preBuf.rd] = preBuf.cr;
-        sucBuf.rd = preBuf.rd;
-        sucBuf.cr = preBuf.cr;
+        lastRD = preBuf.rd;
+        lastCR = preBuf.cr;
     }
 
-//    if (preBuf.pc != 0) {
-//        std::cout << std::hex << '#' << preBuf.pc << '\n';
-//        std::cout << "0 ";
-//        for (u32 i = 1; i < 32; i++) std::cout << reg->data[i] << ' ';
-//        std::cout << std::endl;
-//    }
+#ifdef RISC_V_SIMULATOR_DEBUG_REGISTER
+    if (preBuf.pc != 0 && op) {
+        std::cout << std::hex << '#' << preBuf.pc << '\n';
+        std::cout << "0 ";
+        for (u32 i = 1; i < 32; i++) std::cout << reg->data[i] << ' ';
+        std::cout << std::endl;
+    }
+
+    if (preBuf.pc == 0x10c0u && reg->data[20] == 8u)
+        debugPrint("here");
+#endif
 }

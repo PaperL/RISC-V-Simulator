@@ -64,7 +64,7 @@ public:
         } EX_MEM;
 
         struct MEM_WB_Buffer {
-            u32 pc;
+            u32 pc = 0;
 
             static const u32 NONE = 0b0000u;
             static const u32 HALT = 0b1111u;
@@ -72,13 +72,8 @@ public:
             u32 op = NONE;
             u32 rd = 0;     // register destination
             u32 cr = 0;     // calculation result
+
         } MEM_WB;
-
-        struct WB_Result_Buffer {
-
-            u32 rd = 0;
-            u32 cr = 0;
-        } WB_Result;
 
         bufferType() { clear(); }
 
@@ -126,14 +121,19 @@ public:
 
 class stageEX : public stage {
 public:
-    bufferType *EX_MEM_Buffer, *MEM_WB_Buffer, *WB_Result;
+    bufferType *EX_MEM_Buffer, *MEM_WB_Buffer;
     u32 &IF_ID_EX_Stall_Flag;
-    u32 &MEM_Stall_Flag;
+    const u32 &MEM_Stall_Flag;
+    const u32 &lastRD, &lastCR;
+    u32 &IF_ID_EX_Stall_rv1, &IF_ID_EX_Stall_rv2;
 
-    stageEX(bufferType *Global_EX_MEM_Buffer, bufferType *Global_MEM_WB_Buffer, bufferType *Global_WB_Result,
-            u32 &Global_IF_ID_Stall_Flag, u32 &Global_MEM_Stall_Flag)
+    stageEX(bufferType *Global_EX_MEM_Buffer, bufferType *Global_MEM_WB_Buffer,
+            u32 &Global_IF_ID_Stall_Flag, u32 &Global_MEM_Stall_Flag,
+            u32 &globalLastRD, u32 &globalLastCR, u32 &Global_IF_ID_EX_Stall_rv1, u32 &Global_IF_ID_EX_Stall_rv2)
             : stage(), IF_ID_EX_Stall_Flag(Global_IF_ID_Stall_Flag), MEM_Stall_Flag(Global_MEM_Stall_Flag),
-              EX_MEM_Buffer(Global_EX_MEM_Buffer), MEM_WB_Buffer(Global_MEM_WB_Buffer), WB_Result(Global_WB_Result) {}
+              EX_MEM_Buffer(Global_EX_MEM_Buffer), MEM_WB_Buffer(Global_MEM_WB_Buffer),
+              lastRD(globalLastRD), lastCR(globalLastCR),
+              IF_ID_EX_Stall_rv1(Global_IF_ID_EX_Stall_rv1), IF_ID_EX_Stall_rv2(Global_IF_ID_EX_Stall_rv2) {}
 
     void run() override;
 };
@@ -149,8 +149,8 @@ public:
     predictor &pred;
     bufferType *MEM_WB_Buffer;
 
-    stageMEM(MemoryType *globalMemory, u32 &globalPC, predictor &globalPredictor, bufferType *global_MEM_WB_Buffer,
-             u32 &Global_MEM_Stall_Flag)
+    stageMEM(MemoryType *globalMemory, u32 &globalPC, predictor &globalPredictor,
+             bufferType *global_MEM_WB_Buffer, u32 &Global_MEM_Stall_Flag)
             : stage(), stall(Global_MEM_Stall_Flag),
               mem(globalMemory), pc(globalPC), pred(globalPredictor), MEM_WB_Buffer(global_MEM_WB_Buffer) {}
 
@@ -164,9 +164,10 @@ class stageWB : public stage {
 public:
     RegisterType *reg;
     u32 &finishFlag;
+    u32 &lastRD, &lastCR;
 
-    stageWB(RegisterType *globalRegister, u32 &globalFinishFlag)
-            : stage(), reg(globalRegister), finishFlag(globalFinishFlag) {}
+    stageWB(RegisterType *globalRegister, u32 &globalFinishFlag, u32 &globalLastRD, u32 &globalLastCR)
+            : stage(), reg(globalRegister), finishFlag(globalFinishFlag), lastRD(globalLastRD), lastCR(globalLastCR) {}
 
     void run() override;
 };

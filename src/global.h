@@ -4,7 +4,8 @@
 #ifndef RISC_V_SIMULATOR_GLOBAL
 #define RISC_V_SIMULATOR_GLOBAL
 
-// #define RISC_V_SIMULATOR_DEBUG
+// #define RISC_V_SIMULATOR_DEBUG_STAGE
+// #define RISC_V_SIMULATOR_DEBUG_REGISTER
 // #define RISC_V_SIMULATOR_PREDICTION_RESULT
 
 #include <exception>
@@ -303,7 +304,7 @@ using MemoryType = STORAGE::storageType<1048576, u8>;
 
 
 void debugPrint(const auto &info) {
-#ifdef RISC_V_SIMULATOR_DEBUG
+#ifdef RISC_V_SIMULATOR_DEBUG_STAGE
     std::cout << info << std::endl;
 #endif
 }
@@ -311,7 +312,7 @@ void debugPrint(const auto &info) {
 void debugPrintL(const auto &info) { std::cout << info; }
 
 void debugPrint(const auto &... _argList) {
-#ifdef RISC_V_SIMULATOR_DEBUG
+#ifdef RISC_V_SIMULATOR_DEBUG_STAGE
     (debugPrintL(_argList), ...);
     std::cout << std::endl;
 #endif
