@@ -6,7 +6,8 @@
 
 // #define RISC_V_SIMULATOR_DEBUG_STAGE
 // #define RISC_V_SIMULATOR_DEBUG_REGISTER
-// #define RISC_V_SIMULATOR_PREDICTION_RESULT
+// #define RISC_V_SIMULATOR_DEBUG_PREDICTOR
+#define RISC_V_SIMULATOR_PREDICTION_RESULT
 
 #include <exception>
 #include <iostream>
@@ -118,13 +119,13 @@ namespace INSTRUCTION {
                           u32 &instruction, u32 &rs1, u32 &rs2, u32 &rd, u32 &imm,
                           u32 &regFlag) {
         u32 opcode, funct3, funct7;
-        opcode = (ins & 0b00000000'00000000'00000000'01111111u);           // Operation Code
-        funct3 = (ins & 0b00000000'00000000'01110000'00000000u) >> 12u;    // Function Type 1
-        funct7 = (ins & 0b11111110'00000000'00000000'00000000u) >> 25u;    // Function Type 2
-        rs1 = (ins & 0b00000000'00001111'10000000'00000000u) >> 15u;    // Register 1
-        rs2 = (ins & 0b00000001'11110000'00000000'00000000u) >> 20u;    // Register 2
-        rd = (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;     // Memory
-        imm = 0;
+        opcode  = (ins & 0b00000000'00000000'00000000'01111111u);           // Operation Code
+        funct3  = (ins & 0b00000000'00000000'01110000'00000000u) >> 12u;    // Function Type 1
+        funct7  = (ins & 0b11111110'00000000'00000000'00000000u) >> 25u;    // Function Type 2
+        rs1     = (ins & 0b00000000'00001111'10000000'00000000u) >> 15u;    // Register 1
+        rs2     = (ins & 0b00000001'11110000'00000000'00000000u) >> 20u;    // Register 2
+        rd      = (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;     // Memory
+        imm     = 0;
 
 #define SETMNE(_x) (instruction = ((instruction == insMnemonic::NONE) ? (insMnemonic::_x) : (instruction)))
 
@@ -137,14 +138,14 @@ namespace INSTRUCTION {
             case 0b0110111u:
                 SETMNE(LUI);
                 regFlag = 0;
-                imm = (ins & 0b11111111'11111111'11110000'00000000u);   // 31:12
+                imm  = (ins & 0b11111111'11111111'11110000'00000000u);          // 31:12
                 break;
 
                 // UJ
             case 0b1101111u:
                 SETMNE(JAL);
                 regFlag = 0;
-                imm = (ins & 0b10000000'00000000'00000000'00000000u) >> 11u;   // 20
+                imm  = (ins & 0b10000000'00000000'00000000'00000000u) >> 11u;   // 20
                 imm |= (ins & 0b01111111'11100000'00000000'00000000u) >> 20u;   // 10:1
                 imm |= (ins & 0b00000000'00010000'00000000'00000000u) >> 9u;    // 11
                 imm |= (ins & 0b00000000'00001111'11110000'00000000u);          // 19:12
@@ -188,7 +189,7 @@ namespace INSTRUCTION {
             case 0b1100111u:
                 SETMNE(JALR);
                 regFlag = 1;
-                imm = (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
+                imm  = (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
                 HEX::signExtend(imm, 11);
                 break;
 
@@ -203,7 +204,7 @@ namespace INSTRUCTION {
                         SETMNE(SW);
                 }
                 regFlag = 2;
-                imm = (ins & 0b11111110'00000000'00000000'00000000u) >> 20u;   // 11:5
+                imm  = (ins & 0b11111110'00000000'00000000'00000000u) >> 20u;   // 11:5
                 imm |= (ins & 0b00000000'00000000'00001111'10000000u) >> 7u;    // 4:0
                 HEX::signExtend(imm, 11);
                 break;
@@ -231,7 +232,7 @@ namespace INSTRUCTION {
                         SETMNE(AND);
                 }
                 regFlag = 2;
-                imm = (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
+                imm  = (ins & 0b11111111'11110000'00000000'00000000u) >> 20u;   // 11:0
                 HEX::signExtend(imm, 11);
                 break;
 
@@ -301,6 +302,7 @@ namespace STORAGE {
 
 using RegisterType = STORAGE::storageType<32, u32>;
 using MemoryType = STORAGE::storageType<1048576, u8>;
+
 
 
 void debugPrint(const auto &info) {

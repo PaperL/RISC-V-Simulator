@@ -26,7 +26,7 @@ public:
             u32 rd = 0;
             u32 rs1 = 0;
             u32 rs2 = 0;
-            u32 rv1 = 0;    // register value
+            u32 rv1 = 0;        // register value
             u32 rv2 = 0;
             u32 imm = 0;
         } ID_EX;
@@ -34,44 +34,44 @@ public:
         struct EX_MEM_Buffer {
             u32 pc = 0;
             u32 predictedPc = 0;
-            static const u32 NONE = 0b0000'0000u;
-            static const u32 HALT = 0b1111'1111u;
+            static const u32 NONE       = 0b0000'0000u;
+            static const u32 HALT       = 0b1111'1111u;
 
-            static const u32 TYPE_1 = 0b0000'0011u;
-            static const u32 REG = 0b0000'0001u;
-            static const u32 JUMP = 0b0000'0010u;
+            static const u32 TYPE_1     = 0b0000'0011u;
+            static const u32 REG        = 0b0000'0001u;
+            static const u32 JUMP       = 0b0000'0010u;
 
-            static const u32 TYPE_2 = 0b0000'1100u;
-            static const u32 BRANCH = 0b0000'0100u;
-            static const u32 MEM_LOAD = 0b0000'1000u;
-            static const u32 MEM_STORE = 0b0000'1100u;
+            static const u32 TYPE_2     = 0b0000'1100u;
+            static const u32 BRANCH     = 0b0000'0100u;
+            static const u32 MEM_LOAD   = 0b0000'1000u;
+            static const u32 MEM_STORE  = 0b0000'1100u;
 
-            static const u32 BRANCH_TAKEN = 0b0001'0000u;
+            static const u32 BRANCH_TAKEN=0b0001'0000u;
 
-            static const u32 MEM_LEN = 0b0011'0000u;
-            static const u32 MEM_8 = 0b0001'0000u;
-            static const u32 MEM_16 = 0b0010'0000u;
-            static const u32 MEM_32 = 0b0011'0000u;
+            static const u32 MEM_LEN    = 0b0011'0000u;
+            static const u32 MEM_8      = 0b0001'0000u;
+            static const u32 MEM_16     = 0b0010'0000u;
+            static const u32 MEM_32     = 0b0011'0000u;
 
             static const u32 MEM_SIGNED = 0b0100'0000u;
 
             u32 op = NONE;
-            u32 rd = 0;     // register destination
-            u32 mt = 0;     // memory target
-            u32 rs2 = 0;   // memory store register source
-            u32 cr = 0;     // calculation result
-            u32 jd = 0;     // jump destination
+            u32 rd = 0;         // register destination
+            u32 mt = 0;         // memory target
+            u32 rs2 = 0;        // memory store register source
+            u32 cr = 0;         // calculation result
+            u32 jd = 0;         // jump destination
         } EX_MEM;
 
         struct MEM_WB_Buffer {
             u32 pc = 0;
 
-            static const u32 NONE = 0b0000u;
-            static const u32 HALT = 0b1111u;
-            static const u32 REG = 0b0001u;
+            static const u32 NONE   = 0b0000u;
+            static const u32 HALT   = 0b1111u;
+            static const u32 REG    = 0b0001u;
             u32 op = NONE;
-            u32 rd = 0;     // register destination
-            u32 cr = 0;     // calculation result
+            u32 rd = 0;         // register destination
+            u32 cr = 0;         // calculation result
 
         } MEM_WB;
 

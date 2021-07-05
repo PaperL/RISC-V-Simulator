@@ -15,7 +15,7 @@ void stageIF::run() {
             (mem->data[pc + 3] << 24u) | (mem->data[pc + 2] << 16u) |
             (mem->data[pc + 1] << 8u) | mem->data[pc];
 
-    pc = pred.predictPC(pc, pc + 4);        // branch prediction
+    pc = pred.predictPC(pc, pc + 4, sucBuf.insContent);        // branch prediction
     sucBuf.predictedPc = pc;
 }
 
@@ -435,7 +435,7 @@ void stageMEM::run() {
         debugPrint("MEM: STORE = ", MEM_STORE_cr);
     }
     else if (opType2 == MEM_OP::BRANCH) {
-        pred.update(preBuf.pc, op & MEM_OP::BRANCH_TAKEN, preBuf.jd, preBuf.predictedPc == preBuf.jd);
+        pred.update(preBuf.pc, op & MEM_OP::BRANCH_TAKEN, preBuf.jd, (preBuf.predictedPc == preBuf.jd));
         debugPrint("MEM: BRANCH_TAKEN = ", (op & MEM_OP::BRANCH_TAKEN) ? 1u : 0u);
         if (preBuf.predictedPc != preBuf.jd) {
             pc = preBuf.jd;

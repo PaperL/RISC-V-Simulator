@@ -28,7 +28,8 @@ public:
         pipeline[3] = new stageMEM(mem, pc_modified, pred, pipeline[4]->preBuffer, MEM_Stall_Flag);
         pipeline[2] = new stageEX(pipeline[3]->preBuffer, pipeline[4]->preBuffer,  // forward
                                   IF_ID_EX_Stall_Flag, MEM_Stall_Flag,
-                                  lastRD, lastCR, IF_ID_EX_Stall_rv1, IF_ID_EX_Stall_rv2);
+                                  lastRD, lastCR,
+                                  IF_ID_EX_Stall_rv1, IF_ID_EX_Stall_rv2);
     }
 
     ~cpu() {
@@ -40,7 +41,7 @@ public:
     void init(std::istream &inputStream) { mem->MemInit(inputStream); }
 
     void work() {
-        while (!finishFlag) {                             // simulate cpu clock
+        while (!finishFlag) {                               // simulate cpu clock
             debugPrint("Period Begin");
 
             reg->data[0] = 0u;
@@ -49,14 +50,13 @@ public:
             lastPC = pc;
 
             for (auto &i : pipeline) {
-                i->run();                               // each stage works
+                i->run();                                   // each stage works
                 debugPrint(' ');
             }
+
             debugPrint("Period End\n=================================");
 
-            if (pc_modified != -1u) pc = pc_modified;   // -1 for no modified pc
-
-            // if (pc == 0x10e4u) std::cout << "stall: " << MEM_Stall_Flag << std::endl;
+            if (pc_modified != -1u) pc = pc_modified;       // -1 for no modified pc
 
             if (!IF_ID_EX_Stall_Flag || MEM_Stall_Flag) {   // ignore hazard when jump
                 for (u32 i = 0; i < 4; i++) {               // hand over buffer
@@ -64,7 +64,7 @@ public:
                     pipeline[i]->sucBuffer->clear();
                 }
             }
-            else { // stall IF,ID,EX stage for 1 period
+            else {                                          // stall IF,ID,EX stage for 1 period
                 debugPrint("IF_ID_EX_Stall_Flag = 1");
                 *(pipeline[4]->preBuffer) = *(pipeline[3]->sucBuffer);
                 pipeline[3]->preBuffer->clear();
@@ -75,13 +75,13 @@ public:
             if (MEM_Stall_Flag) MEM_Stall_Flag--;
         }
         debugPrint("HEX Ans = ", reg->data[10]);
-        std::cout << std::dec << (reg->data[10] & 0xFFu) << std::endl;              // output answer
+        std::cout << std::dec << (reg->data[10] & 0xFFu) << std::endl;          // output answer
 
 #ifdef RISC_V_SIMULATOR_PREDICTION_RESULT
-        std::cout << "Branch Prediction Succeeded " << pred.success     // output branch prediction result
-                  << " Times in all " << pred.tot << " Times." << std::endl;
-        std::cout << "Prediction Success Rate: "
-                  << double(pred.success) / double(pred.tot) << std::endl;
+        std::cout << "\n===== BRANCH PREDICTION RESULT =====\n";         // output branch prediction result
+        std::cout << "Total Prediction Time:   \t" << std::oct << pred.tot <<"\n";
+        std::cout << "Prediction Success Time: \t" << std::oct << pred.success <<"\n";
+        std::cout << "Prediction Success Rate: \t" << double(pred.success) / double(pred.tot) << std::endl;
 #endif
 
     }
