@@ -80,11 +80,16 @@
 
 ## 分支预测
 
-- 实现方式
+- 一级分支预测
   - 在 `IF (Instruction Fetch)` 阶段进行分支预测，以 `PC (Program Counter)` 作为预测依据
   - 通过大小为 `4096` 的 `BHT (Branch History Table)` 预测是否跳转
   - 通过大小为 `256` 的 `BTB (Branch Target Buffer)` 获取预测跳转地址
-- 成功率
+- 二级分支预测
+  - 在 `IF (Instruction Fetch)` 阶段进行分支预测，以 `PC (Program Counter)` 作为预测依据
+  - 通过大小为 `256` 的 `BHT (Branch History Table)` 获取分支历史记录
+  - 通过大小为 `256×64` 的 `PHT (Pattern History Table)` 获取是否跳转
+  - 通过大小为 `256` 的 `BTB (Branch Target Buffer)` 获取预测跳转地址
+- 成功率（二级分支预测）
 
 `statistics powered by walotta`
 
