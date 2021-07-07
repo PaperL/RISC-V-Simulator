@@ -8,6 +8,41 @@
 
 
 
+## 五级流水设计示意图
+
+![](Pipeline General Design.png)
+
+### 缩写说明
+
+五级流水各个阶段
+
+| 缩写    | 全称               |
+| ------- | ------------------ |
+| **IF**  | Instruction Fetch  |
+| **ID**  | Instruction Decode |
+| **EX**  | Execute            |
+| **MEM** | Memory Access      |
+| **WB**  | Write Back         |
+
+实现过程中涉及的名词
+
+| 缩写       | 全称                 | 说明                     |
+| ---------- | -------------------- | ------------------------ |
+| **PC**     | Program Counter      | 待执行的下一条指令地址   |
+| *IA*       | Instruction Address  | 当前指令地址             |
+| **INS**    | Insturction          |                          |
+| **OPCODE** | Operation Code       |                          |
+| **RS**     | Register Source      | 读取值的寄存器序号       |
+| *RV*       | Register Value       | 获取的寄存器值           |
+| **IMM**    | Immediate            | 立即数                   |
+| **RD**     | Register Destination | 将写入的寄存器序号       |
+| *CR*       | Calculation Result   |                          |
+| *TA*       | Target Address       | 跳转或分支指令的目标地址 |
+
+**注：粗体内容为通用缩写。斜体内容为个人起名，不保证在其他资料中含义相同。*
+
+
+
 ## 文件结构
 
 - **main.cpp**
