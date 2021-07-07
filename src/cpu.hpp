@@ -75,12 +75,16 @@ public:
             if (MEM_Stall_Flag) MEM_Stall_Flag--;
         }
         debugPrint("HEX Ans = ", reg->data[10]);
-        std::cout << std::dec << (reg->data[10] & 0xFFu) << std::endl;          // output answer
+        std::cout << std::dec;
+        std::cout << (reg->data[10] & 0xFFu) << std::endl;          // output answer
 
+//        std::cout << double(pred.success) / double(pred.tot) << std::endl;
+//        std::cout << pred.success << std::endl;
+//        std::cout << pred.tot << std::endl;
 #ifdef RISC_V_SIMULATOR_PREDICTION_RESULT
         std::cout << "\n===== BRANCH PREDICTION RESULT =====\n";         // output branch prediction result
-        std::cout << "Total Prediction Time:   \t" << std::oct << pred.tot <<"\n";
-        std::cout << "Prediction Success Time: \t" << std::oct << pred.success <<"\n";
+        std::cout << "Total Prediction Time:   \t" << std::oct << pred.tot << "\n";
+        std::cout << "Prediction Success Time: \t" << std::oct << pred.success << "\n";
         std::cout << "Prediction Success Rate: \t" << double(pred.success) / double(pred.tot) << std::endl;
 #endif
 

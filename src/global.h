@@ -9,6 +9,9 @@
 // #define RISC_V_SIMULATOR_DEBUG_PREDICTOR
 #define RISC_V_SIMULATOR_PREDICTION_RESULT
 
+// #define RISC_V_SIMULATOR_ONE_LEVEL_BRANCH_PREDICTION
+#define RISC_V_SIMULATOR_TWO_LEVEL_BRANCH_PREDICTION
+
 #include <exception>
 #include <iostream>
 #include <string>
