@@ -10,7 +10,7 @@
 
 ## 五级流水设计示意图
 
-![](Pipeline General Design.png)
+![](Pipeline_General_Design.png)
 
 ### 缩写说明
 
