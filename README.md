@@ -80,9 +80,36 @@
 
 ## 分支预测
 
-- 实现方式
+- 一级分支预测
   - 在 `IF (Instruction Fetch)` 阶段进行分支预测，以 `PC (Program Counter)` 作为预测依据
   - 通过大小为 `4096` 的 `BHT (Branch History Table)` 预测是否跳转
   - 通过大小为 `256` 的 `BTB (Branch Target Buffer)` 获取预测跳转地址
-- 成功率
-  - 待完成
+- 二级分支预测
+  - 在 `IF (Instruction Fetch)` 阶段进行分支预测，以 `PC (Program Counter)` 作为预测依据
+  - 通过大小为 `256` 的 `BHT (Branch History Table)` 获取分支历史记录
+  - 通过大小为 `256×64` 的 `PHT (Pattern History Table)` 获取是否跳转
+  - 通过大小为 `256` 的 `BTB (Branch Target Buffer)` 获取预测跳转地址
+- 成功率（二级分支预测）
+
+`statistics powered by walotta`
+
+| 测试点 | 成功率 | 预测成功次数 | 总预测次数 |
+| :----: | :----: | :------------: | :----------: |
+|**array_test1**|54.55%|12|22|
+|**array_test2**|50.00%|13|26|
+|**basicopt1**|99.20%|153893|155139|
+|**bulgarian**|94.49%|67555|71493|
+|**expr**|68.47%|76|111|
+|**gcd**|60.83%|73|120|
+|**hanoi**|98.38%|17175|17457|
+|**lvalue2**|66.67%|4|6|
+|**magic**|85.24%|57850|67869|
+|**manyarguments**|80.00%|8|10|
+|**multiarray**|55.56%|90|162|
+|**naive**|/|0|0|
+|**pi**|84.45%|33742332|39956380|
+|**qsort**|96.14%|192319|200045|
+|**queens**|81.09%|62531|77116|
+|**statement_test**|61.88%|125|202|
+|**superloop**|98.97%|430549|435027|
+|**tak**|80.53%|48832|60639|
